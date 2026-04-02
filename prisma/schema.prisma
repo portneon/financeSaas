@@ -27,9 +27,7 @@ model Users {
   adminId      String?
   admin        Users?  @relation("admintousers", fields: [adminId], references: [id])
   subordinates Users[] @relation("admintousers")
-
   transactions Transaction[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -38,6 +36,7 @@ enum TransactionType {
   INCOME
   EXPENSE
 }
+// i am not sure about category in my view ye hai kis field me paisa kharch hua hai same like showed in Gpay ui..
 
 model Transaction {
   id       String          @id @default(uuid())
@@ -46,10 +45,8 @@ model Transaction {
   category String
   date     DateTime
   notes    String?
-
   userId String
   user   Users  @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) 
   updatedAt DateTime @updatedAt
 }
