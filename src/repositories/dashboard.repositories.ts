@@ -47,7 +47,7 @@ class DashboardRepo {
         return {
             totalIncome,
             totalExpenses,
-            netBalance: totalIncome - totalExpenses,
+            netBalance: (totalIncome !== null && totalExpenses !== null) ? totalIncome - totalExpenses : null,
         };
     }
 

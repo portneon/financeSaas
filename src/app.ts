@@ -17,7 +17,7 @@ app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
 app.use('/', (req, res) => {
-    res.send("Standard API is up");
+    res.send("Mai Banunga Finance Analyst");
 });
 app.use(notFoundHandler);
 app.use(errorHandler);
