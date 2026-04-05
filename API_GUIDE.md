@@ -1,86 +1,458 @@
 # API Reference Guide
 
-This guide details exactly **what each endpoint does**, **who has permission** to access it, and **what actions (work)** can be performed.
+This guide documents every endpoint in the finance project, including access rules, request payloads, query parameters, and response behavior.
 
-All endpoints (except Authentication) are secure and require a valid JWT token sent in the `Authorization: Bearer <token>` header. 
+> All endpoints except `/api/v1/auth/login` and `/api/v1/auth/register` require a valid JWT in the header:
+> `Authorization: Bearer <token>`
 
 ---
 
 ## 1. Authentication Endpoints
 
-### User Login
+### 1.1 Login
+
 - **Endpoint:** `POST /api/v1/auth/login`
-- **Who can access:** Anyone (Publicly accessible).
-- **What it does:** Authenticates a user's credentials against the database.
-- **Work Performed:** Verifies the user email and password. If correct, the server generates and returns a secure JWT Token which is required to unlock all the private APIs listed below.
+- **Access:** Public
+- **Description:** Authenticate a user and return a JWT token.
+
+Request Body:
+
+- `email` (string, required)
+- `password` (string, required)
+
+Example:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+```
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "id": "...",
+      "name": "...",
+      "email": "...",
+      "role": "ADMIN",
+      "adminId": null
+    },
+    "token": "<jwt-token>"
+  }
+}
+```
+
+Error Responses:
+
+- `400` if `email` or `password` is missing
+- `401` if credentials are invalid
 
 ---
-### Admin Register 
+
+### 1.2 Register Admin
+
 - **Endpoint:** `POST /api/v1/auth/register`
-- **Who can access:** Only for product testing should be removed in deployment as i was not able to add a bcrypted password to the db i created this route.
-- **What it does:** Creates Admin for app testing.
+- **Access:** Public (intended for testing only)
+- **Description:** Creates a new admin user.
+
+Request Body:
+
+- `name` (string, required)
+- `email` (string, required)
+- `password` (string, required)
+
+Example:
+
+```json
+{
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "password123"
+}
+```
+
+Success Response (200):
+
+- Returns the newly created admin record.
+
+Error Responses:
+
+- `400` if required fields are missing
+- `401` if user already exists
 
 ---
 
 ## 2. Admin & User Management Endpoints
 
-###  Create New Users
-- **Endpoint:** `POST /api/v1/admins/users`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Registers a newly created Analyst or Viewer inside the system.
-- **Work Performed:** Safely hashes their new password, links them logically under the Admin who created them, and assigns them their permanent specific role.
+> These routes require:
+>
+> - valid JWT token
+> - user role must be `ADMIN`
 
-###  View Subordinates
+### 2.1 Create New User
+
+- **Endpoint:** `POST /api/v1/admins/users`
+- **Access:** `ADMIN`
+- **Description:** Creates a new subordinate user with role `ANALYST` or `VIEWER`.
+
+Request Body:
+
+- `name` (string, required)
+- `email` (string, required)
+- `password` (string, required)
+- `role` (string, required) — `ANALYST` or `VIEWER`
+
+Example:
+
+```json
+{
+  "name": "Analyst One",
+  "email": "analyst@example.com",
+  "password": "securepass",
+  "role": "ANALYST"
+}
+```
+
+Success Response (201):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "user": {
+      "id": "...",
+      "name": "Analyst One",
+      "email": "analyst@example.com",
+      "role": "ANALYST",
+      "adminId": "<admin-id>"
+    }
+  }
+}
+```
+
+Error Responses:
+
+- `400` if required fields are missing or role is invalid
+- `403` if the authenticated user is not `ADMIN`
+
+---
+
+### 2.2 List Admin Subordinates
+
 - **Endpoint:** `GET /api/v1/admins/:id/users`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Retrieves a list of users governed by an Admin.
-- **Work Performed:** Returns an array of Analyst/Viewer accounts mapping back to the Admin's specific `adminId` tag.
+- **Access:** `ADMIN`
+- **Description:** Returns users created by a given admin.
+
+Path Parameters:
+
+- `id` (string) — admin user ID
+
+Success Response (200):
+
+- Returns an array of subordinate users.
+
+Error Responses:
+
+- `403` if not `ADMIN`
+- `401` if token is missing/invalid
 
 ---
 
 ## 3. Financial Transaction Endpoints
 
-###  Create Transaction
+> These routes require valid JWT and `ADMIN` role.
+
+### 3.1 Create Transaction
+
 - **Endpoint:** `POST /api/v1/transactions`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Submits a new financial entry (Income or Expense) into the database.
-- **Work Performed:** Parses the payload (amount, category, type, date, notes) and records it to the user's permanent financial ledger.
+- **Access:** `ADMIN`
+- **Description:** Create a transaction record for the authenticated admin.
 
-###  View All Transactions
+Request Body:
+
+- `amount` (number, required)
+- `type` (string, required) — `INCOME` or `EXPENSE`
+- `category` (string, required)
+- `date` (string, required) — ISO date string
+- `notes` (string, optional)
+
+Example:
+
+```json
+{
+  "amount": 450.0,
+  "type": "INCOME",
+  "category": "Sales",
+  "date": "2026-04-05T00:00:00.000Z",
+  "notes": "April revenue"
+}
+```
+
+Success Response (201):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "transaction": {
+      "id": "...",
+      "amount": 450.0,
+      "type": "INCOME",
+      "category": "Sales",
+      "date": "2026-04-05T00:00:00.000Z",
+      "notes": "April revenue",
+      "userId": "..."
+    }
+  }
+}
+```
+
+Error Responses:
+
+- `400` if required fields are missing or type is invalid
+- `403` if not `ADMIN`
+
+---
+
+### 3.2 Get All Transactions
+
 - **Endpoint:** `GET /api/v1/transactions`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Fetches the raw transaction history.
-- **Work Performed:** Retrieves all chronologically recorded transactions tied exclusively to the user ID provided inside the JWT token. 
+- **Access:** `ADMIN`
+- **Description:** Retrieve all transactions for the authenticated user.
 
-###  Update a Transaction
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "transactions": [
+      {
+        "id": "...",
+        "amount": 450.0,
+        "type": "INCOME",
+        "category": "Sales",
+        "date": "2026-04-05T00:00:00.000Z",
+        "notes": "April revenue",
+        "userId": "..."
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 3.3 Get Transaction by ID
+
+- **Endpoint:** `GET /api/v1/transactions/:id`
+- **Access:** `ADMIN`
+- **Description:** Get a single transaction by its ID.
+
+Path Parameters:
+
+- `id` (string) — transaction ID
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "transaction": {
+      "id": "..."
+    }
+  }
+}
+```
+
+Error Responses:
+
+- `404` if transaction is not found
+
+---
+
+### 3.4 Update Transaction
+
 - **Endpoint:** `PUT /api/v1/transactions/:id`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Edits an existing financial entry.
-- **Work Performed:** Modifies the amount, type, category, or notes of a specific transaction that was previously logged incorrectly.
+- **Access:** `ADMIN`
+- **Description:** Update a transaction's fields.
 
-###  Delete a Transaction
+Path Parameters:
+
+- `id` (string) — transaction ID
+
+Request Body (any subset):
+
+- `amount` (number)
+- `type` (string) — `INCOME` or `EXPENSE`
+- `category` (string)
+- `date` (string) — ISO date string
+- `notes` (string)
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "transaction": {
+      "id": "...",
+      "amount": 500.0,
+      "type": "EXPENSE",
+      "category": "Office",
+      "date": "2026-04-05T00:00:00.000Z",
+      "notes": "Updated notes"
+    }
+  }
+}
+```
+
+Error Responses:
+
+- `404` if transaction not found
+
+---
+
+### 3.5 Delete Transaction
+
 - **Endpoint:** `DELETE /api/v1/transactions/:id`
-- **Who can access:** Only **`ADMIN`** users.
-- **What it does:** Permanently removes an entry.
-- **Work Performed:** Deletes a specific logged transaction entirely from the MySQL database.
+- **Access:** `ADMIN`
+- **Description:** Permanently delete a transaction.
+
+Path Parameters:
+
+- `id` (string) — transaction ID
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "message": "Transaction deleted successfully"
+}
+```
+
+Error Responses:
+
+- `404` if transaction not found
 
 ---
 
 ## 4. Dashboard & Analytics Endpoints
 
-###  Financial Overview (Widgets)
-- **Endpoint:** `GET /api/v1/dashboard`
-- **Who can access:** **All Authenticated Roles** (`ADMIN`, `ANALYST`, etc.)
-- **What it does:** Delivers a calculated overview of a user's financial health.
-- **Work Performed:** The database natively executes complex aggregations (`SUM` and `GROUP BY`) to instantly provide:
-    - **Total Net Income & Expenses**
-    - **Net Balance Calculation**
-    - **Category-wise Totals** (e.g. How much spent on Food vs Rent)
-    - **Recent Activity** (The last 10 entries)
-- **Modifiable Filters:** Allows dynamic URL querying by `?startDate=X`, `?endDate=Y`, `?category=Z` or `?type=EXPENSE`.
+> These routes require a valid JWT token. Any authenticated role may access them.
 
-###  Historical Trends
+### 4.1 Financial Overview
+
+- **Endpoint:** `GET /api/v1/dashboard`
+- **Access:** `ADMIN`, `ANALYST`, `VIEWER`
+- **Description:** Returns financial summary, category totals, and recent activity for the authenticated user.
+
+Query Parameters:
+
+- `startDate` (string, optional) — ISO date to filter from
+- `endDate` (string, optional) — ISO date to filter to
+- `category` (string, optional)
+- `type` (string, optional) — `INCOME` or `EXPENSE`
+
+Example:
+`GET /api/v1/dashboard?startDate=2026-01-01&endDate=2026-04-01&type=EXPENSE`
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "summary": {
+      "totalIncome": 1000,
+      "totalExpense": 400,
+      "netBalance": 600
+    },
+    "categoryTotals": [
+      { "category": "Food", "amount": 150 },
+      { "category": "Rent", "amount": 250 }
+    ],
+    "recentActivity": [
+      {
+        "id": "...",
+        "amount": 80,
+        "type": "EXPENSE",
+        "category": "Food",
+        "date": "2026-04-05T00:00:00.000Z",
+        "notes": "Lunch"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 4.2 Historical Trends
+
 - **Endpoint:** `GET /api/v1/dashboard/trends`
-- **Who can access:** **All Authenticated Roles** (`ADMIN`, `ANALYST`, etc.)
-- **What it does:** Provides the math to render analytical charts/graphs over time.
-- **Work Performed:** Aggregates and groups your revenue/spending linearly across different weeks or months (defined via the `granularity=monthly` query parameter).
+- **Access:** `ADMIN`, `ANALYST`, `VIEWER`
+- **Description:** Returns revenue/spending trends over time.
+
+Query Parameters:
+
+- `startDate` (string, optional)
+- `endDate` (string, optional)
+- `category` (string, optional)
+- `type` (string, optional) — `INCOME` or `EXPENSE`
+- `granularity` (string, optional) — `weekly` or `monthly` (default: `monthly`)
+
+Success Response (200):
+
+```json
+{
+  "status": "success",
+  "data": {
+    "trends": [
+      {
+        "period": "2026-03",
+        "income": 1000,
+        "expense": 400
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 5. Data Models
+
+### User
+
+- `id`: string
+- `name`: string
+- `email`: string
+- `role`: `ADMIN` | `ANALYST` | `VIEWER`
+- `adminId`: string | null
+
+### Transaction
+
+- `id`: string
+- `amount`: float
+- `type`: `INCOME` | `EXPENSE`
+- `category`: string
+- `date`: DateTime
+- `notes`: string | null
+- `userId`: string
+
+---
+
+## 6. Notes
+
+- `ADMIN` can create other users and manage transactions.
+- `ANALYST` and `VIEWER` can only access dashboard endpoints.
+- The token payload includes `id`, `role`, and `email`.
+- Transaction deletion is permanent.
