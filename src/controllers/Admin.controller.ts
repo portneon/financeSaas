@@ -9,7 +9,7 @@ class AdminController {
     });
 
     registerUser = asyncHandler(async (req: any, res: any) => {
-        // Safe check req.user injected from verifyToken middleware
+
         const adminId = req.user.id;
 
         const newUser = await adminService.registerUser(adminId, req.body);

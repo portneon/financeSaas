@@ -8,7 +8,7 @@ class AdminService {
     }
 
     async registerUser(adminId: string, userData: any) {
-        // Enforce strong validation
+
         if (userData.role !== "ANALYST" && userData.role !== "VIEWER") {
             throw new ApiError(400, "Admins can only register ANALYST or VIEWER roles.");
         }
@@ -24,7 +24,7 @@ class AdminService {
             adminId: adminId
         });
 
-        // Exclude return password
+
         const { password, ...userWithoutPassword } = newUser;
         return userWithoutPassword;
     }

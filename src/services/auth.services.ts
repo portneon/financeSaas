@@ -22,6 +22,18 @@ class AuthService {
 
         return { user: userWithoutPassword, token };
     }
+
+    async register(name: string, email: string, password: string) {
+        const user = await authRepo.findByEmail(email);
+        if (user) {
+            throw new Error("User already exists");
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        return await authRepo.createAdmin(name, email, hashedPassword);
+    }
 }
 
 export default new AuthService();

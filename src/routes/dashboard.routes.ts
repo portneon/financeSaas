@@ -9,4 +9,5 @@ router.use(verifyToken);
 router.get("/", dashboardController.overview);
 router.get("/trends", dashboardController.trends);
 
+
 export default router;

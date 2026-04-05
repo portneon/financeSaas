@@ -10,13 +10,13 @@ const app = express();
 
 app.use(express.json());
 
-
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/admins", adminRoutes);
 app.use("/api/v1/transactions", transactionRoutes);
 app.use("/api/v1/dashboard", dashboardRoutes);
 
-app.use('/', (req, res) => {
+
+app.get('/', (req: any, res: any) => {
     res.send("Mai Banunga Finance Analyst");
 });
 app.use(notFoundHandler);

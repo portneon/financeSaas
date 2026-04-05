@@ -15,6 +15,7 @@ app.use("/api/v1/auth", auth_routes_1.default);
 app.use("/api/v1/admins", admin_routes_1.default);
 app.use("/api/v1/transactions", transaction_routes_1.default);
 app.use("/api/v1/dashboard", dashboard_routes_1.default);
+
 app.use('/', (req, res) => {
     res.send("Standard API is up");
 });
